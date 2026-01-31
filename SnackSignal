@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snack Signal</title>
+    <!-- React & ReactDOM (The Engine) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel (To read the code) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS (For Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons (Built-in so they work offline) ---
+        const IconWrapper = ({ children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const ChevronLeft = (props) => <IconWrapper {...props}><path d="m15 18-6-6 6-6"/></IconWrapper>;
+        const ChevronRight = (props) => <IconWrapper {...props}><path d="m9 18 6-6-6-6"/></IconWrapper>;
+        const Plus = (props) => <IconWrapper {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconWrapper>;
+        const CalendarIcon = (props) => <IconWrapper {...props}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></IconWrapper>;
+        const AlignLeft = (props) => <IconWrapper {...props}><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></IconWrapper>;
+        const Trash2 = (props) => <IconWrapper {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconWrapper>;
+        const X = (props) => <IconWrapper {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconWrapper>;
+        const AlertTriangle = (props) => <IconWrapper {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></IconWrapper>;
+        const Leaf = (props) => <IconWrapper {...props}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></IconWrapper>;
+        const Package = (props) => <IconWrapper {...props}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22v-9"/></IconWrapper>;
+        const Snowflake = (props) => <IconWrapper {...props}><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></IconWrapper>;
+        const AlertCircle = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconWrapper>;
+        const Bell = (props) => <IconWrapper {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></IconWrapper>;
+        const Volume2 = (props) => <IconWrapper {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></IconWrapper>;
+
+        // --- Categories Config ---
+        const CATEGORY_CONFIG = {
+            'Meat': { color: 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200', icon: AlertCircle, label: 'Meat/Fish' },
+            'Dairy': { color: 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200', icon: CheckCircle, label: 'Dairy' },
+            'Produce': { color: 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200', icon: Leaf, label: 'Produce' },
+            'Pantry': { color: 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200', icon: Package, label: 'Pantry' },
+            'Frozen': { color: 'bg-cyan-100 text-cyan-700 border-cyan-200 hover:bg-cyan-200', icon: Snowflake, label: 'Frozen' },
+            'Other': { color: 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200', icon: AlignLeft, label: 'Other' }
+        };
+
+        // --- Helpers ---
+        const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+        const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+        const getTodayDate = () => new Date(); 
+
+        const formatDateForInput = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const getMonthName = (date) => date.toLocaleString('default', { month: 'long' });
+
+        const getDayDifference = (d1, d2) => {
+            const date1 = new Date(d1);
+            const date2 = new Date(d2);
+            const diffTime = date1.getTime() - date2.getTime();
+            return Math.round(diffTime / (1000 * 60 * 60 * 24));
+        };
+
+        // --- Main App Component ---
+        function App() {
+            const [currentDate, setCurrentDate] = useState(getTodayDate());
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [items, setItems] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            
+            // Notification State
+            const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+            const [expiringTomorrowItems, setExpiringTomorrowItems] = useState([]);
+            const [notifPermission, setNotifPermission] = useState(Notification.permission);
+
+            // Form State
+            const [formTitle, setFormTitle] = useState('');
+            const [formDesc, setFormDesc] = useState('');
+            const [formQuantity, setFormQuantity] = useState('');
+            const [formCategory, setFormCategory] = useState('Produce');
+
+            // --- LOAD DATA (LocalStorage) ---
+            useEffect(() => {
+                const saved = localStorage.getItem('snack_signal_data');
+                if (saved) {
+                    setItems(JSON.parse(saved));
+                }
+            }, []);
+
+            // --- SAVE DATA (LocalStorage) ---
+            const saveItemsToStorage = (newItems) => {
+                setItems(newItems);
+                localStorage.setItem('snack_signal_data', JSON.stringify(newItems));
+            };
+
+            // --- ALARM LOGIC ---
+            useEffect(() => {
+                const today = getTodayDate();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(today.getDate() + 1);
+                const tomorrowStr = formatDateForInput(tomorrow);
+
+                const expiringTomorrow = items.filter(item => item.date === tomorrowStr);
+                setExpiringTomorrowItems(expiringTomorrow);
+
+                if (expiringTomorrow.length > 0 && Notification.permission === "granted") {
+                    new Notification("Snack Signal Alarm!", {
+                        body: `${expiringTomorrow.length} items are expiring tomorrow!`,
+                    });
+                }
+            }, [items]);
+
+            const handleEnableNotifications = () => {
+                Notification.requestPermission().then((permission) => {
+                    setNotifPermission(permission);
+                });
+            };
+
+            // --- Calendar Nav ---
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth();
+            const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+            const firstDayOfWeek = getFirstDayOfMonth(currentYear, currentMonth);
+            const todayDate = getTodayDate();
+            const todayString = formatDateForInput(todayDate);
+
+            const prevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+            const nextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+            const goToToday = () => setCurrentDate(getTodayDate());
+
+            // --- CRUD Operations ---
+            const openNewItemModal = (date) => {
+                setSelectedDate(date);
+                setEditingItem(null);
+                setFormTitle('');
+                setFormDesc('');
+                setFormQuantity('');
+                setFormCategory('Produce');
+                setIsModalOpen(true);
+            };
+
+            const openEditItemModal = (e, item) => {
+                e.stopPropagation();
+                setEditingItem(item);
+                setSelectedDate(new Date(item.date));
+                setFormTitle(item.title);
+                setFormDesc(item.description || '');
+                setFormQuantity(item.quantity || '');
+                setFormCategory(item.category || 'Produce');
+                setIsModalOpen(true);
+            };
+
+            const handleSaveItem = () => {
+                if (!selectedDate || !formTitle.trim()) return;
+
+                const newItem = {
+                    id: editingItem ? editingItem.id : Date.now().toString(),
+                    title: formTitle,
+                    date: formatDateForInput(selectedDate),
+                    description: formDesc,
+                    quantity: formQuantity,
+                    category: formCategory,
+                };
+
+                let newItems;
+                if (editingItem) {
+                    newItems = items.map(i => i.id === editingItem.id ? newItem : i);
+                } else {
+                    newItems = [...items, newItem];
+                }
+                
+                saveItemsToStorage(newItems);
+                setIsModalOpen(false);
+            };
+
+            const handleDeleteItem = () => {
+                if (!editingItem) return;
+                const newItems = items.filter(i => i.id !== editingItem.id);
+                saveItemsToStorage(newItems);
+                setIsModalOpen(false);
+            };
+
+            // --- RENDER ---
+            const renderCalendarDays = () => {
+                const days = [];
+                for (let i = 0; i < firstDayOfWeek; i++) {
+                    days.push(<div key={`empty-${i}`} className="h-28 md:h-36 bg-gray-50/50 border-b border-r border-gray-200"></div>);
+                }
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateToCheck = new Date(currentYear, currentMonth, d);
+                    const dateString = formatDateForInput(dateToCheck);
+                    const isToday = todayString === dateString;
+                    const dayItems = items.filter(e => e.date === dateString);
+                    const isPast = dateString < todayString;
+
+                    days.push(
+                        <div 
+                            key={d} 
+                            onClick={() => openNewItemModal(dateToCheck)}
+                            className={`h-28 md:h-36 border-b border-r border-gray-200 p-1 md:p-2 transition-colors hover:bg-blue-50 cursor-pointer overflow-hidden group relative flex flex-col ${isToday ? 'bg-blue-50/40 ring-inset ring-2 ring-blue-100' : 'bg-white'} ${isPast ? 'bg-gray-50' : ''}`}
+                        >
+                            <div className="flex justify-between items-start mb-1">
+                                <span className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-gray-700 group-hover:bg-white/50'} ${isPast && !isToday ? 'text-gray-400' : ''}`}>{d}</span>
+                                <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded-full transition-opacity md:hidden"><Plus className="w-3 h-3 text-gray-500" /></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto space-y-1 no-scrollbar">
+                                {dayItems.map(item => {
+                                    const config = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG['Other'];
+                                    const CategoryIcon = config.icon;
+                                    const diff = getDayDifference(item.date, todayString);
+                                    let colorClass = diff < 0 ? 'bg-gray-100 text-gray-500 line-through decoration-red-500' : diff < 1 ? 'bg-red-100 text-red-700 font-bold' : diff < 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
+                                    return (
+                                        <div key={item.id} onClick={(e) => openEditItemModal(e, item)} className={`text-xs px-1.5 py-1 rounded border truncate shadow-sm cursor-pointer flex items-center gap-1.5 ${colorClass}`}>
+                                            {diff < 0 ? <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" /> : <CategoryIcon className="w-3 h-3 opacity-70 flex-shrink-0" />}
+                                            <span className="font-medium truncate">{item.title}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                }
+                const remainingCells = 7 - (days.length % 7);
+                if (remainingCells < 7) for (let i = 0; i < remainingCells; i++) days.push(<div key={`empty-end-${i}`} className="h-28 md:h-36 bg-gray-50/50 border-b border-r border-gray-200"></div>);
+                return days;
+            };
+
+            const NotificationDropdown = () => (
+                <div className="absolute top-16 right-4 md:right-20 md:top-14 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2"><Volume2 className="w-4 h-4 text-gray-500" /> Expiring Tomorrow</h3>
+                        {notifPermission !== 'granted' && <button onClick={handleEnableNotifications} className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors">Enable Popups</button>}
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                        {expiringTomorrowItems.length === 0 ? <div className="p-6 text-center text-gray-400 text-sm">No items expiring tomorrow. <br/> You're all good!</div> : 
+                            <div className="divide-y divide-gray-50">
+                                {expiringTomorrowItems.map(item => (
+                                    <div key={item.id} className="p-3 hover:bg-red-50 transition-colors cursor-pointer" onClick={(e) => { setShowNotifDropdown(false); openEditItemModal(e, item); }}>
+                                        <div className="flex items-start gap-3">
+                                            <div className="bg-red-100 p-2 rounded-lg text-red-600"><AlertCircle className="w-4 h-4" /></div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                                                <p className="text-xs text-red-500 font-bold">Expires Tomorrow</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">{item.quantity} {item.location}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        }
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-slate-800 relative">
+                    <header className="bg-white border-b border-gray-200 px-4 py-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-10">
+                        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                            <div className="flex items-center gap-2 text-red-600"><AlertTriangle className="w-6 h-6" /><h1 className="text-xl font-bold tracking-tight">Snack Signal</h1></div>
+                            <div className="flex items-center gap-2 md:hidden ml-auto">
+                                <button onClick={(e) => { e.stopPropagation(); setShowNotifDropdown(!showNotifDropdown); }} className={`relative p-2 rounded-full transition-all duration-300 ${showNotifDropdown ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                                    <Bell className="w-5 h-5" />
+                                    {expiringTomorrowItems.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold text-white bg-red-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">{expiringTomorrowItems.length}</span>}
+                                </button>
+                                <button onClick={goToToday} className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Today</button>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 bg-gray-100 p-1 rounded-lg">
+                            <button onClick={prevMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-600"><ChevronLeft className="w-5 h-5" /></button>
+                            <div className="w-40 text-center font-semibold text-lg text-gray-800">{getMonthName(currentDate)} {currentYear}</div>
+                            <button onClick={nextMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-600"><ChevronRight className="w-5 h-5" /></button>
+                        </div>
+                        <div className="hidden md:flex items-center gap-3 relative">
+                            <button onClick={(e) => { e.stopPropagation(); setShowNotifDropdown(!showNotifDropdown); }} className={`relative p-2 rounded-full transition-all duration-300 ${showNotifDropdown ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-gray-100'}`}>
+                                <Bell className={`w-5 h-5 ${expiringTomorrowItems.length > 0 && !showNotifDropdown ? 'animate-pulse text-red-500' : ''}`} />
+                                {expiringTomorrowItems.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold text-white bg-red-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">{expiringTomorrowItems.length}</span>}
+                            </button>
+                            <button onClick={goToToday} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors">Today ({todayDate.getDate()})</button>
+                            <button onClick={() => openNewItemModal(getTodayDate())} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"><Plus className="w-4 h-4" /> Add Expiry</button>
+                        </div>
+                    </header>
+                    {showNotifDropdown && <><div className="fixed inset-0 z-40 bg-transparent" onClick={() => setShowNotifDropdown(false)} /><NotificationDropdown /></>}
+                    <div className="flex-1 overflow-auto p-2 md:p-6">
+                        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day} className="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{day}</div>)}</div>
+                            <div className="grid grid-cols-7 border-l border-gray-200">{renderCalendarDays()}</div>
+                        </div>
+                    </div>
+                    {isModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50"><h2 className="text-lg font-semibold text-gray-900">{editingItem ? 'Edit Expiry' : 'Track New Item'}</h2><button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"><X className="w-5 h-5" /></button></div>
+                                <div className="p-6 space-y-5">
+                                    <div><label className="block text-xs font-medium text-gray-500 uppercase mb-1">Product Name</label><input type="text" value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="e.g. Milk, Chicken Breast" className="w-full text-lg font-medium text-gray-900 placeholder-gray-400 border-b-2 border-gray-200 focus:border-red-500 focus:ring-0 px-0 py-1 transition-colors outline-none" autoFocus /></div>
+                                    <div><label className="block text-xs font-medium text-gray-500 uppercase mb-2">Category</label><div className="grid grid-cols-3 gap-2">{(Object.entries(CATEGORY_CONFIG)).map(([type, config]) => { const CIcon = config.icon; return <button key={type} onClick={() => setFormCategory(type)} className={`flex items-center p-2 rounded-lg border transition-all gap-2 text-left ${formCategory === type ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}><CIcon className="w-4 h-4" /><span className="text-[10px] font-medium">{config.label}</span></button> })}</div></div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5"><label className="text-xs font-medium text-gray-500 uppercase">Quantity (Optional)</label><div className="relative"><Package className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" /><input type="text" value={formQuantity} onChange={e => setFormQuantity(e.target.value)} placeholder="e.g. 2 packs" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none" /></div></div>
+                                        <div className="space-y-1.5"><label className="text-xs font-medium text-gray-500 uppercase">Expiration Date</label><div className="relative"><CalendarIcon className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" /><input type="date" value={selectedDate ? formatDateForInput(selectedDate) : ''} onChange={e => { if (!e.target.value) return; const [y, m, d] = e.target.value.split('-').map(Number); setSelectedDate(new Date(y, m - 1, d)); }} className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none" /></div></div>
+                                    </div>
+                                    <div className="space-y-1.5"><label className="text-xs font-medium text-gray-500 uppercase">Notes / Location</label><div className="relative"><AlignLeft className="w-4 h-4 text-gray-400 absolute left-3 top-3" /><textarea value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="e.g. Top shelf, Freezer" rows={2} className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none resize-none" /></div></div>
+                                    <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">{editingItem ? <button onClick={handleDeleteItem} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /> Delete</button> : <div></div>}<div className="flex items-center gap-3"><button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button><button onClick={handleSaveItem} disabled={!formTitle.trim()} className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-md transition-colors">Save Item</button></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
